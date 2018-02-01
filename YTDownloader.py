@@ -1,63 +1,78 @@
 #!/usr/bin/python2
 
 from pytube import YouTube
+from os.path import expanduser
 import bs4 as bs
 import urllib2 as ur
-import html5lib
+import optparse
 import sys
 import os
 
-if len(sys.argv) < 2 or len(sys.argv) > 2:
-    print "Invalid argument"
-    sys.exit(0)
+parser = optparse.OptionParser()
+parser.add_option("-p", "--playlist", dest = "playlistAddress", help = "Enter address to playlist", type = str)
+parser.add_option("-v", "--video", dest = "videoAddress", help = "Enter address to video", type = str)
 
-playlistAddress = sys.argv[1]
+(options, args) = parser.parse_args()
 
-sauce = ur.urlopen(playlistAddress).read()
-soup = bs.BeautifulSoup(sauce, "html5lib")
+# Exit if none or both params are entered
+if (options.playlistAddress is not None and options.videoAddress is not None) or \
+        (options.playlistAddress is None and options.videoAddress is None):
+    print("Invalid params (choose one)")
+    sys.exit(1)
 
-#Get the playlist TITLE
-playlistTitle = soup.find("h1", attrs = {"class":"pl-header-title"}).text.strip()
+# If playlist is chosen
+if(options.playlistAddress is not None):
+    playlistAddress = options.playlistAddress
+    sauce = ur.urlopen(playlistAddress).read()
+    soup = bs.BeautifulSoup(sauce, "html5lib")
 
-print "Fetching playlist information...\n"
+    # Get the playlist TITLE
+    playlistTitle = soup.find("h1", attrs={"class": "pl-header-title"}).text.strip()
 
-#Create subfolder in /home/erik/Videos/Youtube/
-folderPath = "/home/erik/Videos/Youtube/" + playlistTitle + "/"
-if not os.path.isdir(folderPath):
-    print "Creating location: " + folderPath
-    os.makedirs(folderPath)
-else:
-    print "Saving files to existing location: " + folderPath
+    print "Fetching playlist information...\n"
 
-downloadedVideos = []
-abortedVideos = []
+    # Create subfolder in /home/erik/Videos/Youtube/
+    folderPath = expanduser("~") + "/Videos/Youtube/" + playlistTitle + "/"
+    if not os.path.isdir(folderPath):
+        print "Creating location: " + folderPath
+        os.makedirs(folderPath)
+    else:
+        print "Saving files to existing location: " + folderPath
 
-print "\nDownloading...\n"
+    downloadedVideos = []
+    abortedVideos = []
 
-currentVideoNumber = 1
+    print "\nDownloading...\n"
 
-for td in soup.find_all("td", attrs = {"class" : "pl-video-title"}):
-    a = td.find("a")
-    if "/watch" in a.get("href"):
-        videoAddress = "https://www.youtube.com" + a.get("href")
-        yt = YouTube(videoAddress)
-        video = yt.filter("mp4")[-1]
-        try:
-            print str(currentVideoNumber) + ": " + "Filename: " + yt.filename + "\nFormat: " + str(yt.filter("mp4")[-1])
-            video.download(folderPath)
-            downloadedVideos.append(str(yt.filename))
-        except OSError:
-            print "DUPLICATE FILENAME FOUND! Aborting download..."
-            abortedVideos.append(str(yt.filename))
-        currentVideoNumber += 1
-        print
+    currentVideoNumber = 1
 
-print "Successfully downloaded " + str(len(downloadedVideos)) + " videos:"
+    for td in soup.find_all("td", attrs={"class": "pl-video-title"}):
+        a = td.find("a")
+        if "/watch" in a.get("href"):
+            videoAddress = "https://www.youtube.com" + a.get("href")
+            yt = YouTube(videoAddress)
+            video = yt.filter("mp4")[-1]
+            try:
+                print str(currentVideoNumber) + ": " + "Filename: " + yt.filename + "\nFormat: " + str(
+                    yt.filter("mp4")[-1])
+                video.download(folderPath)
+                downloadedVideos.append(str(yt.filename))
+            except OSError:
+                print "DUPLICATE FILENAME FOUND! Aborting download..."
+                abortedVideos.append(str(yt.filename))
+            currentVideoNumber += 1
+            print
 
-for i in range(len(downloadedVideos)):
-    print str(i + 1) + " : " + str(downloadedVideos[i])
-print "\nFailed to download " + str(len(abortedVideos)) + " videos:"
-for i in range(len(abortedVideos)):
-    print str(i + 1) + " : " + str(abortedVideos[i])
+    print "Successfully downloaded " + str(len(downloadedVideos)) + " videos:"
 
-print "\nDownload finished!"
+    for i in range(len(downloadedVideos)):
+        print str(i + 1) + " : " + str(downloadedVideos[i])
+    print "\nFailed to download " + str(len(abortedVideos)) + " videos:"
+    for i in range(len(abortedVideos)):
+        print str(i + 1) + " : " + str(abortedVideos[i])
+
+    print "\nDownload finished!"
+
+if options.videoAddress is not None:
+    print(expanduser("~"))
+
