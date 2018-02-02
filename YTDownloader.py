@@ -45,16 +45,17 @@ if(options.playlistAddress is not None):
     print "\nDownloading...\n"
 
     currentVideoNumber = 1
-
+    print(soup.find("td", attrs={"class": "pl-video-title"}))
     for td in soup.find_all("td", attrs={"class": "pl-video-title"}):
         a = td.find("a")
         if "/watch" in a.get("href"):
             videoAddress = "https://www.youtube.com" + a.get("href")
             yt = YouTube(videoAddress)
-            video = yt.filter("mp4")[-1]
+            print(yt)
+            video = yt.streams.filter(subtype = "mp4").all()[0]
             try:
-                print str(currentVideoNumber) + ": " + "Filename: " + yt.filename + "\nFormat: " + str(
-                    yt.filter("mp4")[-1])
+                print (str(currentVideoNumber) + ": " + "Filename: " + yt.filename + "\nFormat: " + str(
+                    yt.filter("mp4")[-1]))
                 video.download(folderPath)
                 downloadedVideos.append(str(yt.filename))
             except OSError:
@@ -74,5 +75,22 @@ if(options.playlistAddress is not None):
     print "\nDownload finished!"
 
 if options.videoAddress is not None:
-    print(expanduser("~"))
+    videoAddress = options.videoAddress
+    sauce = ur.urlopen(videoAddress).read()
+    soup = bs.BeautifulSoup(sauce, "html5lib")
+    channelName = ""
+    for link in soup.find_all("a", {"class" : "yt-uix-sessionlink spf-link "}):
+        channelName = link.text.strip()
+    video = YouTube(videoAddress)
+
+    # Create subfolder in /home/erik/Videos/Youtube/
+    folderPath = expanduser("~") + "/Videos/Youtube/" + channelName + "/"
+    if not os.path.isdir(folderPath):
+        print "Creating location: " + folderPath
+        os.makedirs(folderPath)
+    else:
+        print "Saving files to existing location: " + folderPath
+
+    video.streams.filter(subtype = "mp4").all()[0].download(folderPath)
+
 
