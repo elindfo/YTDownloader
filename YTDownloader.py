@@ -37,8 +37,11 @@ if(options.playlistAddress is not None):
     soup = bs.BeautifulSoup(sauce, "html5lib")
 
     # Get the playlist TITLE
-    playlistTitle = soup.find("h1", attrs={"class": "pl-header-title"}).text.strip()
-
+    try:
+        playlistTitle = soup.find("h1", attrs={"class": "pl-header-title"}).text.strip()
+    except AttributeError:
+        print("Not a playlist URL")
+        sys.exit(1)
     print("Fetching playlist information...\n")
 
     # Create subfolder in /home/erik/Videos/Youtube/
@@ -54,25 +57,26 @@ if(options.playlistAddress is not None):
 
     print("\nDownloading...\n")
 
-    currentVideoNumber = 1
-    print(soup.find("td", attrs={"class": "pl-video-title"}))
+    currentVideoNumber = 0
+
     for td in soup.find_all("td", attrs={"class": "pl-video-title"}):
         a = td.find("a")
         if "/watch" in a.get("href"):
             videoAddress = "https://www.youtube.com" + a.get("href")
-            yt = YouTube(videoAddress)
-            print(yt)
-            video = yt.streams.filter(subtype = "mp4").all()[0]
             try:
-                print (str(currentVideoNumber) + ": " + "Filename: " + yt.filename + "\nFormat: " + str(
-                    yt.filter("mp4")[-1]))
-                video.download(folderPath)
-                downloadedVideos.append(str(yt.filename))
-            except OSError:
-                print("DUPLICATE FILENAME FOUND! Aborting download...")
-                abortedVideos.append(str(yt.filename))
-            currentVideoNumber += 1
-            print
+                currentVideoNumber += 1
+                video = YouTube(videoAddress)
+                video = video.streams.filter(subtype="mp4").all()[0]
+                try:
+                    print (str(currentVideoNumber) + ": " + "Filename: " + a.text.strip())
+                    video.download(folderPath)
+                    downloadedVideos.append(str(a.text.strip()))
+                except OSError:
+                    print("DUPLICATE FILENAME FOUND! Aborting download...")
+                    abortedVideos.append(str(video.filename))
+
+            except exceptions.RegexMatchError:
+                print("Unable to download from URL: " + videoAddress)
 
     print("Successfully downloaded " + str(len(downloadedVideos)) + " videos:")
 
