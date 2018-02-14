@@ -9,6 +9,15 @@ import optparse
 import sys
 import os
 
+
+def set_url(u):
+    try:
+        return ur.urlopen(u).read()
+    except ValueError:
+        print("Invalid URL format")
+        sys.exit(1)
+
+
 parser = optparse.OptionParser()
 parser.add_option("-p", "--playlist", dest="playlistAddress", help="Enter address to playlist", type=str)
 parser.add_option("-v", "--video", dest="videoAddress", help="Enter address to video", type=str)
@@ -24,7 +33,7 @@ if (options.playlistAddress is not None and options.videoAddress is not None) or
 # If playlist is chosen
 if(options.playlistAddress is not None):
     playlistAddress = options.playlistAddress
-    sauce = ur.urlopen(playlistAddress).read()
+    sauce = set_url(playlistAddress)
     soup = bs.BeautifulSoup(sauce, "html5lib")
 
     # Get the playlist TITLE
@@ -77,8 +86,9 @@ if(options.playlistAddress is not None):
 
 if options.videoAddress is not None:
     videoAddress = options.videoAddress
+    sauce = set_url(videoAddress)
+
     try:
-        sauce = ur.urlopen(videoAddress).read()
         soup = bs.BeautifulSoup(sauce, "html5lib")
 
         video = YouTube(videoAddress)
@@ -104,8 +114,6 @@ if options.videoAddress is not None:
         print("Downloading: [" + videoName + "]")
         video.streams.filter(subtype="mp4").all()[0].download(folderPath)
 
-    except ValueError:
-        print("Invalid URL format.")
     except exceptions.RegexMatchError:
         print("Invalid video URL")
 
