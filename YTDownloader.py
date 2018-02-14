@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 
 from pytube import YouTube
+from pytube import exceptions
 from os.path import expanduser
 import bs4 as bs
 import urllib2 as ur
@@ -9,8 +10,8 @@ import sys
 import os
 
 parser = optparse.OptionParser()
-parser.add_option("-p", "--playlist", dest = "playlistAddress", help = "Enter address to playlist", type = str)
-parser.add_option("-v", "--video", dest = "videoAddress", help = "Enter address to video", type = str)
+parser.add_option("-p", "--playlist", dest="playlistAddress", help="Enter address to playlist", type=str)
+parser.add_option("-v", "--video", dest="videoAddress", help="Enter address to video", type=str)
 
 (options, args) = parser.parse_args()
 
@@ -29,20 +30,20 @@ if(options.playlistAddress is not None):
     # Get the playlist TITLE
     playlistTitle = soup.find("h1", attrs={"class": "pl-header-title"}).text.strip()
 
-    print "Fetching playlist information...\n"
+    print("Fetching playlist information...\n")
 
     # Create subfolder in /home/erik/Videos/Youtube/
     folderPath = expanduser("~") + "/Videos/Youtube/" + playlistTitle + "/"
     if not os.path.isdir(folderPath):
-        print "Creating location: " + folderPath
+        print("Creating location: " + folderPath)
         os.makedirs(folderPath)
     else:
-        print "Saving files to existing location: " + folderPath
+        print("Saving files to existing location: " + folderPath)
 
     downloadedVideos = []
     abortedVideos = []
 
-    print "\nDownloading...\n"
+    print("\nDownloading...\n")
 
     currentVideoNumber = 1
     print(soup.find("td", attrs={"class": "pl-video-title"}))
@@ -59,38 +60,58 @@ if(options.playlistAddress is not None):
                 video.download(folderPath)
                 downloadedVideos.append(str(yt.filename))
             except OSError:
-                print "DUPLICATE FILENAME FOUND! Aborting download..."
+                print("DUPLICATE FILENAME FOUND! Aborting download...")
                 abortedVideos.append(str(yt.filename))
             currentVideoNumber += 1
             print
 
-    print "Successfully downloaded " + str(len(downloadedVideos)) + " videos:"
+    print("Successfully downloaded " + str(len(downloadedVideos)) + " videos:")
 
     for i in range(len(downloadedVideos)):
-        print str(i + 1) + " : " + str(downloadedVideos[i])
-    print "\nFailed to download " + str(len(abortedVideos)) + " videos:"
+        print (str(i + 1) + " : " + str(downloadedVideos[i]))
+    print("\nFailed to download " + str(len(abortedVideos)) + " videos:")
     for i in range(len(abortedVideos)):
         print str(i + 1) + " : " + str(abortedVideos[i])
 
-    print "\nDownload finished!"
+    print("\nDownload finished!")
 
 if options.videoAddress is not None:
     videoAddress = options.videoAddress
-    sauce = ur.urlopen(videoAddress).read()
-    soup = bs.BeautifulSoup(sauce, "html5lib")
-    channelName = ""
-    for link in soup.find_all("a", {"class" : "yt-uix-sessionlink spf-link "}):
-        channelName = link.text.strip()
-    video = YouTube(videoAddress)
+    try:
+        sauce = ur.urlopen(videoAddress).read()
+        soup = bs.BeautifulSoup(sauce, "html5lib")
 
-    # Create subfolder in /home/erik/Videos/Youtube/
-    folderPath = expanduser("~") + "/Videos/Youtube/" + channelName + "/"
-    if not os.path.isdir(folderPath):
-        print "Creating location: " + folderPath
-        os.makedirs(folderPath)
-    else:
-        print "Saving files to existing location: " + folderPath
+        video = YouTube(videoAddress)
 
-    video.streams.filter(subtype = "mp4").all()[0].download(folderPath)
+        channelName = ""
+        for link in soup.find_all("a", {"class": "yt-uix-sessionlink spf-link "}):
+            channelName = link.text.strip()
+
+        # Create subfolder in /home/erik/Videos/Youtube/
+        folderPath = expanduser("~") + "/Videos/Youtube/" + channelName + "/"
+        if not os.path.isdir(folderPath):
+            print("Creating location: " + folderPath)
+            os.makedirs(folderPath)
+        else:
+            print("Saving files to existing location: " + folderPath)
+
+        # Fetch video name
+        videoName = ""
+        for n in soup.find_all("h1", {"class": "watch-title-container"}):
+            videoName = n.find("span").text.strip()
+
+        # Start downloading
+        print("Downloading: [" + videoName + "]")
+        video.streams.filter(subtype="mp4").all()[0].download(folderPath)
+
+    except ValueError:
+        print("Invalid URL format.")
+    except exceptions.RegexMatchError:
+        print("Invalid video URL")
+
+
+
+
+
 
 
